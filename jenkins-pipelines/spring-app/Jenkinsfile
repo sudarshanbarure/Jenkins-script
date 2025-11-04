@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    tools {
+        jdk 'jdk21'
+        maven 'maven-latest'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-repo/spring-app.git'
+            }
+        }
+
+        stage('Cleanup Old Containers') {
+            steps {
+                sh '''
+                    docker stop spring-app || true
+                    docker rm spring-app || true
+                '''
+            }
+        }
+
+        stage('Build JAR') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t spring-app .'
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh 'docker run -d -p 8080:8080 --name spring-app spring-app'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker ps -a'
+        }
+    }
+}
